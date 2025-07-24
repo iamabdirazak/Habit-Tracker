@@ -6,52 +6,52 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @StateObject private var habitStore = HabitStore()
+    @State private var newHabitName = ""
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationView {
+            VStack {
+                // Add Habit Section
+                HStack {
+                    TextField("New Habit", text: $newHabitName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                    Button(action: {
+                        guard !newHabitName.isEmpty else { return }
+                        habitStore.addHabit(name: newHabitName)
+                        newHabitName = ""
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.blue)
+                            .font(.title)
+                    }
+                    .padding(.trailing)
+                }
+                .padding(.top)
+                
+                // Habit List Section
+                List {
+                    ForEach(habitStore.habits) { habit in
+                        HStack {
+                            Text(habit.name)
+                            Spacer()
+                            Button(action: {
+                                habitStore.toggleCompletion(for: habit)
+                            }) {
+                                Image(systemName: habit.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(habit.isCompleted ? .green : .gray)
+                                    .font(.title2)
+                            }
+                        }
                     }
                 }
-                .onDelete(perform: deleteItems)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+            .navigationTitle("Habit Tracker")
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        .environmentObject(habitStore)
     }
 }
 
